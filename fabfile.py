@@ -63,6 +63,7 @@ def _deploy_release( tag, new_tag):
     local("git tag -a %s -m '%s'" % (new_tag, tag_message))
     local("git push --tags")
     _git_pull()
+    _upload_reltool_config(new_tag)
     _upgrade_release(tag, new_tag)
 
 def _get_git_tag():
@@ -116,12 +117,12 @@ def _generate_release(tag):
         sudo('rm -f active_release')
         sudo('ln -s rel/%s_%s active_release' % (env.project_name, tag))
 
-def _upload_reltool_config(new_tag):
-    config = 'rel/reltool.config'
+def _upload_reltool_config(tag):
+    template = 'rel/reltool.config.template'
     path_to_reltool_config = join(env.code_root, 'rel', 'reltool.config')
     (_version, tag) = _get_git_tag()
     reltool_env = {'tag' : tag}
-    upload_template(config, path_to_reltool_config, context=reltool_env, backup=False, use_sudo=True)
+    upload_template(template, path_to_reltool_config, context=reltool_env, backup=False, use_sudo=True)
 
 def _upgrade_release(current_tag, new_tag):
     with cd(env.code_root):
