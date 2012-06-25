@@ -108,8 +108,8 @@ def _generate_release(tag):
         sudo('./rebar get-deps')
         sudo('./rebar compile generate')
         sudo('mv rel/%s rel/%s_%s' % (env.project_name, env.project_name, tag))
-        sudo('rm -f rel/active')
-        sudo('ln -s rel/%s_%s rel/active' % (env.project_name, tag))
+        sudo('rm -f active_release')
+        sudo('ln -s rel/%s_%s active_release' % (env.project_name, tag))
 
 def _upgrade_release(current_tag, new_tag):
     with cd(env.code_root):
@@ -117,8 +117,8 @@ def _upgrade_release(current_tag, new_tag):
         sudo('./rebar compile generate')
         sudo('./rebar generate-appups previous_release=%s_%s' % (env.project_name, current_tag))
         sudo('./rebar generate-upgrade previous_release=%s_%s' % (env.project_name, current_tag))
-        sudo('mkdir -p rel/active/releases')
-        sudo('mv rel/%s_%s.tar.gz rel/active/releases/' % (env.project_name, new_tag))
+        sudo('mkdir -p active_release/releases')
+        sudo('mv rel/%s_%s.tar.gz active_releases/releases/' % (env.project_name, new_tag))
         eval_string = "release_handler:unpack_release(\\\"%s_%s\\\), \
                 release_handler:install_release(\\\"%s\\\"), \
                 release_handler:make_permanent(\\\"%s\\\"). " % (env.project_name, new_tag, new_tag, new_tag)
