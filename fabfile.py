@@ -39,16 +39,19 @@ def setup():
     (green_bg(end_time.strftime('%H:%M:%S')), (end_time - start_time).seconds)
     puts(finish_message)
 
+@task
 def deploy_major_release(msg):
     version, tag = _get_git_tag()
     new_tag = 'v%s.0.0' % (version[0] + 1)
     _deploy_release(msg, tag, new_tag)
 
+@task
 def deploy_minor_release(msg):
     version, tag = _get_git_tag()
     new_tag = 'v%s.%s.0' % (version[0], version[1] + 1)
     _deploy_release(msg, tag, new_tag)
 
+@task
 def deploy_bugfix_release(msg):
     version, tag = _get_git_tag()
     new_tag = 'v%s.%s.%s' % (version[0], version[1], version[2] + 1)
