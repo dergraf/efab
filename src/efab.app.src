@@ -1,0 +1,12 @@
+{application, efab,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { efab_app, []}},
+  {env, []}
+ ]}.
