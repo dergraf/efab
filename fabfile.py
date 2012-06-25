@@ -22,6 +22,7 @@ def www():
     env.projects_path = join(env.project_user_home, 'projects')
     env.code_root = join(env.projects_path, env.project_name)
     env.erl_node_name = env.project_name
+    env.erl_host_name = '127.0.0.1'
     env.erl_cookie = 'mycookie'
 
 @task
@@ -141,28 +142,51 @@ def _upgrade_release(current_tag, new_tag):
         sudo('./rebar generate-upgrade previous_release=%s_%s' % (env.project_name, current_tag))
         sudo('mkdir -p active_release/releases')
         sudo('mv rel/%s_%s.tar.gz active_release/releases/' % (env.project_name, new_tag))
-        eval_string = "release_handler:unpack_release(\\\"%s_%s\\\), \
-                release_handler:install_release(\\\"%s\\\"), \
-                release_handler:make_permanent(\\\"%s\\\"). " % (env.project_name, new_tag, new_tag, new_tag)
-        _remote_eval(env.node_name, env.cookie, eval_string)
+        _remote_call("release_handler", "unpack_release", "%s_%s" % (env.project_name, new_tag))
+        _remote_call("release_handler", "install_release", new_tag)
+        _remote_call("release_handler", "make_permanent", new_tag)
+        sudo('mv rel/%s rel/%s_%s' % (env.project_name, env.project_name, new_tag))
 
-def _remote_node_available(node, cookie):
+def _get_node_name():
+    return '%s@%s' % (env.erl_node_name, env.erl_host_name)
+
+@task
+def _remote_node_available():
     cmd = """erl -name %s -hidden -setcookie %s \
             -noshell -noinput -eval \
-            '[ Host ] = tl(string:tokens(atom_to_list(node()), \"@\")), \
-            MainNode = list_to_atom(\"%s@\" ++ Host), \
+            'MainNode = list_to_atom(\"%s\"), \
             io:format(\"~p\", [net_adm:ping(MainNode)])' \
             -s erlang halt
-            """ % (_random_node_name(), cookie, node)
+            """ % (_random_node_name(), env.erl_cookie, _get_node_name())
 
-    return sudo(cmd, capture=True) == 'pang'
+    return sudo(cmd) == 'pong'
 
-def _remote_eval(node, cookie, eval_string):
-    if _remote_node_available(node, cookie):
+@task
+def which_release():
+    if _remote_node_available():
         cmd = """erl -name %s -hidden -setcookie %s \
                 -noshell -noinput -eval \
-                '[Host] = tl(string:tokens(atom_to_list(node()), \"@\")), \
-                MainNode = list_to_atom(\"%s@\" ++ Host), \
+                'MainNode = list_to_atom(\"%s\"), \
+                io:format(\"~p\", [rpc:call(MainNode, release_handler, which_releases, [permanent])])' \
+                -s erlang halt
+                """ % (_random_node_name(), env.erl_cookie, _get_node_name())
+        sudo(cmd)
+
+def _remote_call(module, function, single_string_arg):
+    if _remote_node_available():
+        cmd = """erl -name %s -hidden -setcookie %s \
+                -noshell -noinput -eval \
+                'MainNode = list_to_atom(\"%s\"), \
+                io:format(\"~p\", [rpc:call(MainNode, %s, %s, [\"%s\"])])' \
+                -s erlang halt
+                """ % (_random_node_name(), env.erl_cookie, _get_node_name(), module, function, single_string_arg)
+        return sudo(cmd) == 'ok'
+
+def _remote_eval(eval_string):
+    if _remote_node_available():
+        cmd = """erl -name %s -hidden -setcookie %s \
+                -noshell -noinput -eval \
+                'MainNode = list_to_atom(\"%s\"), \
                 {ok, Scanned, _} = erl_scan:string (\"%s\"), \
                 {ok, Parsed} = erl_parse:parse_exprs(Scanned), \
                 case rpc:call(MainNode, erl_eval, exprs, [Parsed, []]) of \
@@ -172,9 +196,9 @@ def _remote_eval(node, cookie, eval_string):
                         io:format("error", []) \
                 end' \
                 -s erlang halt
-                """ % (_random_node_name(), cookie, node, eval_string)
+                """ % (_random_node_name(), env.erl_cookie, _get_node_name(), eval_string)
 
-        return sudo(cmd, capture=True) == 'ok'
+        return sudo(cmd) == 'ok'
 
 def _random_node_name():
-    'erlrctmp_'.join(random.choice("abcdefghijklmnopqrstuvwxyz0123456789") for x in range(8))
+    return 'erlrctmp_' + ''.join(random.choice("abcdefghijklmnopqrstuvwxyz0123456789") for x in range(8)) + '@%s' % env.erl_host_name
