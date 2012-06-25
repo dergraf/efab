@@ -21,6 +21,8 @@ def www():
     env.project_user_home = join('/opt', env.project_user)
     env.projects_path = join(env.project_user_home, 'projects')
     env.code_root = join(env.projects_path, env.project_name)
+    env.erl_node_name = env.project_name
+    env.erl_cookie = 'mycookie'
 
 @task
 def setup():
@@ -110,6 +112,7 @@ def _git_pull():
         sudo('git pull')
 
 def _generate_release(tag):
+    _upload_reltool_config(tag)
     with cd(env.code_root):
         sudo('./rebar get-deps')
         sudo('./rebar compile generate')
@@ -117,10 +120,14 @@ def _generate_release(tag):
         sudo('rm -f active_release')
         sudo('ln -s rel/%s_%s active_release' % (env.project_name, tag))
 
+def _upload_vm_vars(tag):
+    template = 'rel/vm.args.template'
+    path_to_vm_args = join(env.code_root, 'rel', 'files', 'vm.args')
+    upload_template(template, path_to_vm_args, context=env, backup=False, use_sudo=True)
+
 def _upload_reltool_config(tag):
     template = 'rel/reltool.config.template'
     path_to_reltool_config = join(env.code_root, 'rel', 'reltool.config')
-    (_version, tag) = _get_git_tag()
     reltool_env = {'tag' : tag}
     upload_template(template, path_to_reltool_config, context=reltool_env, backup=False, use_sudo=True)
 
@@ -131,7 +138,7 @@ def _upgrade_release(current_tag, new_tag):
         sudo('./rebar generate-appups previous_release=%s_%s' % (env.project_name, current_tag))
         sudo('./rebar generate-upgrade previous_release=%s_%s' % (env.project_name, current_tag))
         sudo('mkdir -p active_release/releases')
-        sudo('mv rel/%s_%s.tar.gz active_releases/releases/' % (env.project_name, new_tag))
+        sudo('mv rel/%s_%s.tar.gz active_release/releases/' % (env.project_name, new_tag))
         eval_string = "release_handler:unpack_release(\\\"%s_%s\\\), \
                 release_handler:install_release(\\\"%s\\\"), \
                 release_handler:make_permanent(\\\"%s\\\"). " % (env.project_name, new_tag, new_tag, new_tag)
