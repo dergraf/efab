@@ -1,4 +1,4 @@
--module(efab_app).
+-module(test_app_app).
 
 -behaviour(application).
 
@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    efab_sup:start_link().
+    test_app_sup:start_link().
 
 stop(_State) ->
     ok.

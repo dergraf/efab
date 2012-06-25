@@ -1,5 +1,5 @@
 
--module(efab_sup).
+-module(test_app_sup).
 
 -behaviour(supervisor).
 

@@ -65,7 +65,6 @@ def _deploy_release( tag, new_tag):
     local("git tag -a %s -m '%s'" % (new_tag, tag_message))
     local("git push --tags")
     _git_pull()
-    _upload_reltool_config(new_tag)
     _upgrade_release(tag, new_tag)
 
 def _get_git_tag():
@@ -112,6 +111,7 @@ def _git_pull():
         sudo('git pull')
 
 def _generate_release(tag):
+    _upload_vm_vars()
     _upload_reltool_config(tag)
     with cd(env.code_root):
         sudo('./rebar get-deps')
@@ -120,7 +120,7 @@ def _generate_release(tag):
         sudo('rm -f active_release')
         sudo('ln -s rel/%s_%s active_release' % (env.project_name, tag))
 
-def _upload_vm_vars(tag):
+def _upload_vm_vars():
     template = 'rel/vm.args.template'
     path_to_vm_args = join(env.code_root, 'rel', 'files', 'vm.args')
     upload_template(template, path_to_vm_args, context=env, backup=False, use_sudo=True)
@@ -132,6 +132,8 @@ def _upload_reltool_config(tag):
     upload_template(template, path_to_reltool_config, context=reltool_env, backup=False, use_sudo=True)
 
 def _upgrade_release(current_tag, new_tag):
+    _upload_vm_vars()
+    _upload_reltool_config(new_tag)
     with cd(env.code_root):
         sudo('./rebar get-deps')
         sudo('./rebar compile generate')

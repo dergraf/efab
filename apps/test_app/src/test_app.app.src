@@ -1,4 +1,4 @@
-{application, efab,
+{application, test_app,
  [
   {description, ""},
   {vsn, git},
@@ -7,6 +7,6 @@
                   kernel,
                   stdlib
                  ]},
-  {mod, { efab_app, []}},
+  {mod, { test_app_app, []}},
   {env, []}
  ]}.
