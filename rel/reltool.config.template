@@ -1,6 +1,6 @@
 {sys, [
        {lib_dirs, ["../deps", "../apps"]},
-       {rel, "efab", "%(tag)",
+       {rel, "efab", "%(tag)s",
         [
          kernel,
          stdlib,
