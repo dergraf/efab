@@ -4,8 +4,9 @@ from os.path import join
 import random
 from datetime import datetime
 from fabric.api import env, puts, cd, hide, task
-from fabric.operations import sudo, local, settings
+from fabric.operations import sudo, local, settings, prompt
 from fabric.colors import _wrap_with
+from fabric.contrib.files import upload_template
 
 green_bg = _wrap_with('42')
 red_bg = _wrap_with('41')
@@ -40,25 +41,26 @@ def setup():
     puts(finish_message)
 
 @task
-def deploy_major_release(msg):
+def deploy_major_release():
     version, tag = _get_git_tag()
     new_tag = 'v%s.0.0' % (version[0] + 1)
-    _deploy_release(msg, tag, new_tag)
+    _deploy_release(tag, new_tag)
 
 @task
-def deploy_minor_release(msg):
+def deploy_minor_release():
     version, tag = _get_git_tag()
     new_tag = 'v%s.%s.0' % (version[0], version[1] + 1)
-    _deploy_release(msg, tag, new_tag)
+    _deploy_release(tag, new_tag)
 
 @task
-def deploy_bugfix_release(msg):
+def deploy_bugfix_release():
     version, tag = _get_git_tag()
     new_tag = 'v%s.%s.%s' % (version[0], version[1], version[2] + 1)
-    _deploy_release(msg, tag, new_tag)
+    _deploy_release(tag, new_tag)
 
-def _deploy_release(msg, tag, new_tag):
-    local("git tag -a %s -m '%s'" % (new_tag, msg))
+def _deploy_release( tag, new_tag):
+    tag_message = prompt("Please enter a tagging message.")
+    local("git tag -a %s -m '%s'" % (new_tag, tag_message))
     local("git push --tags")
     _git_pull()
     _upgrade_release(tag, new_tag)
@@ -113,6 +115,13 @@ def _generate_release(tag):
         sudo('mv rel/%s rel/%s_%s' % (env.project_name, env.project_name, tag))
         sudo('rm -f active_release')
         sudo('ln -s rel/%s_%s active_release' % (env.project_name, tag))
+
+def _upload_reltool_config(new_tag):
+    config = 'rel/reltool.config'
+    path_to_reltool_config = join(env.code_root, 'rel', 'reltool.config')
+    (_version, tag) = _get_git_tag()
+    reltool_env = {'tag' : tag}
+    upload_template(config, path_to_reltool_config, context=reltool_env, backup=False, use_sudo=True)
 
 def _upgrade_release(current_tag, new_tag):
     with cd(env.code_root):
